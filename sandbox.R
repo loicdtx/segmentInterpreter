@@ -1,0 +1,6 @@
+con_out <- src_sqlite('/home/dutri001/sandbox/test_df.sqlite', create = TRUE)
+df <- data.frame(name = c('loic', 'cyril'), age = c(28, 31), date = as.Date(c('1987-11-21', '1984-06-15')))
+db_insert_into( con = con_out$con, table = "rf_training", values = df) 
+db_insert_into( con = con_out$con, table = "rf_training", values = df) 
+db_insert_into( con = con_out$con, table = "rf_training", values = df) 
+tbl(con_out, 'rf_training')
