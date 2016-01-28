@@ -13,7 +13,10 @@ shinyUI(fluidPage(
   ),
   fluidRow(
     column(width = 4,
-           actionButton("update", "Write to db / Next time-series")),
+           textInput('dbPath', 'Path to Data base',
+                     value = '/home/dutri001/git/resilience/data/SR_ee_samples_amazon.sqlite'),
+           actionButton("update", "Write to db / Next time-series"),
+           uiOutput("dbTableSelect")),
     column(width = 4,
            selectInput('formula',
                        label = 'Formula',

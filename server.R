@@ -10,7 +10,35 @@ source('R/utils.R') # cloudShadow(), getLandsatDate()
 # Load data
 dfIn <- readRDS('data/matoGrosso.rds')
 
+
+
+# Create/connect to output db
+con_out <- src_sqlite('/home/dutri001/sandbox/test_df.sqlite', create = TRUE)
+
+
+
 shinyServer(function(input, output) {
+  
+  # Connect to databases
+  dbCon <- reactive({
+    dbFile <- input$dbPath
+    con <- src_sqlite(dbFile)
+    return(con)
+  })
+  
+  
+  # Reactive that lists the tables of the db
+  dbTables <- reactive({
+    return(src_tbls(dbCon()))
+  })
+    
+  # Send list of tables to UI
+  output$dbTableSelect <- renderUI({
+    if(is.null(dbTables())) {
+      return(NULL)
+    }
+    selectInput('dbTableSelect', label = "Input database table",  choices = dbTables())
+  })
   
   # Reactive that runs breakpoints()
   breakpts <- reactive({
