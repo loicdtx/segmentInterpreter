@@ -64,6 +64,25 @@ shinyServer(function(input, output) {
       selectInput(paste0("Class", i), label = paste("Segment_", i),  choices = c('Stable', 'Decline', 'Regrowth', 'Transition', 'Other'), selected = 'Stable')
     })
   })
+  
+  ## Reactive that builds a dataframe from output of breakpts() and interpreted classes
+  trainingDf <- reactive({
+    if (is.null(breakpts())) {
+      return(NULL)
+    }
+    
+    regressorsDf <- breakpts()@statsDf
+    nbSegments <- breakpts()@nbSegments
+    segmentClassVector <- sapply(1:nbSegments, function(i) {
+      input[[paste0("Class", i)]]
+    })
+    
+    regressorsDf$class <- segmentClassVector
+    return(regressorsDf)
+  })
+  
+  # Display the training df produced in the other tab of UI
+  output$statTable <- renderTable({trainingDf()})
 
 })
 
