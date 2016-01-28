@@ -139,9 +139,14 @@ shinyServer(function(input, output) {
   
   # Observer that writes to db when "nextTimeSeries" button is pressed
   observe({
-    if(input$nextTimeSeries > 0)# When button is pressed in UI
+    if(input$writeToDb > 0) { # When button is pressed in UI
       # Update database
-    db_insert_into(con = dbConOut$con, table = "rf_training", values = trainingDf())
+      db_insert_into(con = dbConOut$con, table = "rf_training", values = trainingDf())
+    }
+  })
+
+  observe({
+    
   })
 
 })
