@@ -9,7 +9,7 @@ source('R/utils.R') # cloudShadow(), getLandsatDate()
 
 
 # Create/connect to output db
-con_out <- src_sqlite('/home/dutri001/sandbox/test_df.sqlite', create = TRUE)
+dbConOut <- src_sqlite('/home/dutri001/sandbox/test_df.sqlite', create = TRUE)
 
 
 
@@ -136,6 +136,13 @@ shinyServer(function(input, output) {
   
   # Display the training df produced in the other tab of UI
   output$statTable <- renderTable({trainingDf()})
+  
+  # Observer that writes to db when "nextTimeSeries" button is pressed
+  observe({
+    if(input$nextTimeSeries > 0)# When button is pressed in UI
+      # Update database
+    db_insert_into(con = dbConOut$con, table = "rf_training", values = trainingDf())
+  })
 
 })
 
