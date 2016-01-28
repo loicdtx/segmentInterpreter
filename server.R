@@ -45,7 +45,6 @@ shinyServer(function(input, output) {
 
   # First output (plot)  
   output$bpPlot <- renderPlot({  
-    
     # plot results
     if(is.null(breakpts())) {
       print("No Data")
@@ -54,6 +53,17 @@ shinyServer(function(input, output) {
     }       
   })
   
+  # Dynamically control UI
+  # dynamic select (link to uiOutput("inSelect") in UI)
+  output$inSelect <- renderUI({
+    if (is.null(breakpts())) {
+      return(NULL)
+    }
+    nbSegments <- breakpts()@nbSegments
+    lapply(1:nbSegments, function(i) {
+      selectInput(paste0("Class", i), label = paste("Segment_", i),  choices = c('Stable', 'Decline', 'Regrowth', 'Transition', 'Other'), selected = 'Stable')
+    })
+  })
 
 })
 
