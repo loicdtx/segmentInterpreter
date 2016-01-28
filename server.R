@@ -15,6 +15,9 @@ dbConOut <- src_sqlite('/home/dutri001/sandbox/test_df.sqlite', create = TRUE)
 
 shinyServer(function(input, output) {
   
+  # FOr time-series number
+  counter <- reactiveValues(i = 1)
+  
   # Connect to databases
   dbCon <- reactive({
     dbFile <- input$dbPath
@@ -62,7 +65,7 @@ shinyServer(function(input, output) {
   breakpts <- reactive({
     
     # featureID
-    id <- featuresSample()[12]
+    id <- featuresSample()[counter$i]
     
     # Read df compute required fields and filter clouds and shadows
     df <- dfRemote() %>%
@@ -144,9 +147,12 @@ shinyServer(function(input, output) {
       db_insert_into(con = dbConOut$con, table = "rf_training", values = trainingDf())
     }
   })
-
+  
+  # Observer to go to next time-series when button is pressed
   observe({
-    
+    if(input$nextTimeSeries > 0) {
+      counter$i <- isolate(counter$i) + 1
+    }
   })
 
 })
