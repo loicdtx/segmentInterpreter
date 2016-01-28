@@ -15,8 +15,9 @@ shinyUI(fluidPage(
     column(width = 4,
            textInput('dbPath', 'Path to Data base',
                      value = '/home/dutri001/git/resilience/data/SR_ee_samples_amazon.sqlite'),
-           actionButton("update", "Write to db / Next time-series"),
-           uiOutput("dbTableSelect")),
+           uiOutput("dbTableSelect"),
+           numericInput("nbFeatures", 'Number of features to sample from data base', value = 200, min = 2),
+           actionButton("nextTimeSeries", "Write to db / Next time-series")),
     column(width = 4,
            selectInput('formula',
                        label = 'Formula',
@@ -27,8 +28,6 @@ shinyUI(fluidPage(
            numericInput("order", label = 'Harmonic order', value = 3)),
     
     column(width = 4,
-           sliderInput('h', label = 'minimal segment size', min = 0, max = 1, value = 0.20, step = 0.01),
-           # TODO: add db file input here
-           numericInput("nSamples", "Number of Samples", value = 200, min = 2))
+           sliderInput('h', label = 'minimal segment size', min = 0, max = 1, value = 0.20, step = 0.01))
   )
 ))

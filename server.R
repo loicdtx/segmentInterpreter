@@ -7,10 +7,6 @@ library(stringr)
 
 source('R/utils.R') # cloudShadow(), getLandsatDate()
 
-# Load data
-dfIn <- readRDS('data/matoGrosso.rds')
-
-
 
 # Create/connect to output db
 con_out <- src_sqlite('/home/dutri001/sandbox/test_df.sqlite', create = TRUE)
@@ -40,18 +36,47 @@ shinyServer(function(input, output) {
     selectInput('dbTableSelect', label = "Input database table",  choices = dbTables())
   })
   
+  # Reactive that connects to db table
+  dfRemote <- reactive({
+    return(tbl(dbCon(), dbTables()))
+  })
+  
+  # Reactive that generates a vector of random featureID
+  featuresSample <- reactive({
+    # Get number of features to be sampled from UI
+    nbFeatures <- input$nbFeatures
+    
+    # Get vector of unique features
+    uniqueFeatures <- dfRemote() %>%
+      dplyr::select(featureID) %>%
+      distinct() %>%
+      collect()
+    
+    # Sample from this vector
+    featuresSample <- sample(uniqueFeatures$featureID, nbFeatures)
+    return(featuresSample)
+  })
+  
+  
   # Reactive that runs breakpoints()
   breakpts <- reactive({
     
-    # Get the "next" feature
+    # featureID
+    id <- featuresSample()[12]
     
     # Read df compute required fields and filter clouds and shadows
-    df <- dfIn %>%
+    df <- dfRemote() %>%
+      filter(featureID == id) %>%
+      collect() %>%
       mutate(time = getLandsatDate(sceneID)) %>%
+      mutate(NDMI = (B4 - B5)/(B4 + B5)) %>%
+      mutate(NDVI = (B4 - B3)/(B4 + B3)) %>%
+      mutate(NDSI = (B2 - B5)/(B2 + B5)) %>%
       rowwise() %>%
       mutate(mask = cloudShadow(B1, B3, B4, B7, NDSI, NDVI)) %>% # TODO: Shadow threshold too restrictive for oregon
       filter(mask == 'land') %>%
       data.frame()
+      
     
     formula <- switch(input$formula,
                       'trend' = response ~ trend,
