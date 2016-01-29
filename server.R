@@ -2,52 +2,90 @@ library(shiny)
 library(dplyr)
 library(RSQLite)
 library(spectralResilience)
+library(magrittr)
+library(stringr)
 
 source('R/utils.R') # cloudShadow(), getLandsatDate()
 
+dbConOut <- NULL
+
 shinyServer(function(input, output) {
   
-  # Establish connection with db (not sure where it should go)
-  # dbFile <- input$dbFile
-  # if(is.null(dbFile))
-  #   return(NULL)
-  dbFile <- '/home/dutri001/git/resilience/data/SR_ee_samples_amazon.sqlite'
-  con <- src_sqlite(dbFile)
+  # FOr time-series number
+  counter <- reactiveValues(i = 1)
   
-  # Create/connect to output db
-  con_out <- src_sqlite('/home/dutri001/sandbox/test_df.sqlite', create = TRUE)
-  
-  # List tables and send output to UI
-  # TODO
-  dbTables <- src_tbls(con)
-  
-  # Get from UI the name of the table we want to work with
-  # TODO
-  dfRemote <- tbl(con, dbTables)
+  # Connect to databases
+  dbCon <- reactive({
+    dbFile <- input$dbPath
+    con <- src_sqlite(dbFile)
+    return(con)
+  })
   
   
-  # UI asks how many features to sample
-  # TODO
-  nSamples <- input$nSamples
+  # Reactive that lists the tables of the db
+  dbTables <- reactive({
+    return(src_tbls(dbCon()))
+  })
+    
+  # Send list of tables to UI
+  output$dbTableSelect <- renderUI({
+    if(is.null(dbTables())) {
+      return(NULL)
+    }
+    selectInput('dbTableSelect', label = "Input database table",  choices = dbTables())
+  })
   
-  # Extract vector of featureID unique values and sample from it
-  uniqueFeatures <- dfRemote %>%
-    select(featureID) %>%
-    distinct() %>%
-    collect()
+  # Reactive that connects to db table
+  dfRemote <- reactive({
+    return(tbl(dbCon(), dbTables()))
+  })
   
-  # Sample from feature vector
-  featuresSample <- sample(featuresVector$featureID, nSamples)
+  # Create/connect to output db when button is pressed
+  observe({
+    if(input$dbConnect > 0) {
+      dbConOut <<- src_sqlite(input$dbOutPath, create = TRUE)
+    }
+  })
+  
+  # Get status of output db connection
+  # dbConOut_status <- reactive({
+  #   if(is.null(dbConOut)) {
+  #     return('dbStatusFalse')
+  #   } else {
+  #     return('dbStatusTrue')
+  #   }
+  # })
+  # 
+  # output$dbStatus <- renderUI({
+  #   div(id = dbConOut_status())
+  # })
+  
+  # Reactive that generates a vector of random featureID
+  featuresSample <- reactive({
+    # Get number of features to be sampled from UI
+    nbFeatures <- input$nbFeatures
+    
+    # Get vector of unique features
+    uniqueFeatures <- dfRemote() %>%
+      dplyr::select(featureID) %>%
+      distinct() %>%
+      collect()
+    
+    # Sample from this vector
+    featuresSample <- sample(uniqueFeatures$featureID, nbFeatures)
+    return(featuresSample)
+  })
+  
   
   # Reactive that runs breakpoints()
   breakpts <- reactive({
     
-    # Get the "next" feature
-    id <- featuresSample[featureID_index]
+    # featureID
+    id <- featuresSample()[counter$i]
     
     # Read df compute required fields and filter clouds and shadows
-    df <- dfRemote %>%
-      filter(featureID %in% id) %>%
+    df <- dfRemote() %>%
+      filter(featureID == id) %>%
       collect() %>%
       mutate(time = getLandsatDate(sceneID)) %>%
       mutate(NDMI = (B4 - B5)/(B4 + B5)) %>%
@@ -57,6 +95,7 @@ shinyServer(function(input, output) {
       mutate(mask = cloudShadow(B1, B3, B4, B7, NDSI, NDVI)) %>% # TODO: Shadow threshold too restrictive for oregon
       filter(mask == 'land') %>%
       data.frame()
+      
     
     formula <- switch(input$formula,
                       'trend' = response ~ trend,
@@ -78,7 +117,6 @@ shinyServer(function(input, output) {
 
   # First output (plot)  
   output$bpPlot <- renderPlot({  
-    
     # plot results
     if(is.null(breakpts())) {
       print("No Data")
@@ -87,6 +125,7 @@ shinyServer(function(input, output) {
     }       
   })
   
+  # Dynamically control UI
   # dynamic select (link to uiOutput("inSelect") in UI)
   output$inSelect <- renderUI({
     if (is.null(breakpts())) {
@@ -98,37 +137,54 @@ shinyServer(function(input, output) {
     })
   })
   
-  # Manage the time-series number using a reactiveValue and an observer
-  featureID_index <- reactiveValues(i = 1)
-  observe({
-    input$update
-    featureID_index$i <- isolate(featureID_index$i) + 1
-  })
-  
-  # Reactive that holds the dataframe with predictors and interpreted classes
+  ## Reactive that builds a dataframe from output of breakpts() and interpreted classes
   trainingDf <- reactive({
     if (is.null(breakpts())) {
       return(NULL)
     }
     
+    regressorsDf <- breakpts()@statsDf
     nbSegments <- breakpts()@nbSegments
-    
-    segmentClasses <- sapply(1:nbSegments, function(i) {
+    segmentClassVector <- sapply(1:nbSegments, function(i) {
       input[[paste0("Class", i)]]
     })
     
-    classes <- as.data.frame(segmentClasses)
-    return(cbind(classes, breakpts()@statsDf))
+    regressorsDf$class <- segmentClassVector
+    return(regressorsDf)
   })
   
-  # Build a dataframe and write it to db
-
-  newEntry <- observe({
-    if(input$update > 0) { # When button is pressed in UI
+  # Display the training df produced in the other tab of UI
+  output$statTable <- renderTable({trainingDf()})
+  
+  # Observer that writes to db when "nextTimeSeries" button is pressed
+  observe({
+    if(input$writeToDb > 0) { # When button is pressed in UI
       # Update database
-      db_insert_into(con = con_out$con, table = "rf_training", values = trainingDf())
+      db_insert_into(con = dbConOut$con, table = input$dbOutTable, values = trainingDf())
     }
   })
-  output$table1 <- renderTable({values$df})
+  
+  # Observer to go to next time-series when button is pressed
+  observe({
+    if(input$nextTimeSeries > 0) {
+      counter$i <- isolate(counter$i) + 1
+    }
+  })
+  
+  # reactive that gets pixel location
+  point <- reactive({
+    vec <- cbind(breakpts()@df$long[1], breakpts()@df$lat[1])
+    return(vec)
+  })
+  
+  # Add leaflet map
+  output$plotLocation <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles("Esri.WorldImagery",
+                       options = providerTileOptions(noWrap = TRUE)
+      ) %>%
+      addMarkers(data = point())
+  })
 
 })
+
