@@ -1,0 +1,14 @@
+#dbStatusTrue {
+  border-radius: 50%;
+  background: green;
+  width: 50px;
+  height: 50px;
+}
+    
+    
+#dbStatusFalse {
+  border-radius: 50%;
+  background: red;
+  width: 50px;
+  height: 50px;
+}

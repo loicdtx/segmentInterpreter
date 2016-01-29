@@ -7,11 +7,7 @@ library(stringr)
 
 source('R/utils.R') # cloudShadow(), getLandsatDate()
 
-
-# Create/connect to output db
-dbConOut <- src_sqlite('/home/dutri001/sandbox/test_df.sqlite', create = TRUE)
-
-
+dbConOut <- NULL
 
 shinyServer(function(input, output) {
   
@@ -43,6 +39,26 @@ shinyServer(function(input, output) {
   dfRemote <- reactive({
     return(tbl(dbCon(), dbTables()))
   })
+  
+  # Create/connect to output db when button is pressed
+  observe({
+    if(input$dbConnect > 0) {
+      dbConOut <<- src_sqlite(input$dbOutPath, create = TRUE)
+    }
+  })
+  
+  # Get status of output db connection
+  # dbConOut_status <- reactive({
+  #   if(is.null(dbConOut)) {
+  #     return('dbStatusFalse')
+  #   } else {
+  #     return('dbStatusTrue')
+  #   }
+  # })
+  # 
+  # output$dbStatus <- renderUI({
+  #   div(id = dbConOut_status())
+  # })
   
   # Reactive that generates a vector of random featureID
   featuresSample <- reactive({
@@ -144,7 +160,7 @@ shinyServer(function(input, output) {
   observe({
     if(input$writeToDb > 0) { # When button is pressed in UI
       # Update database
-      db_insert_into(con = dbConOut$con, table = "rf_training", values = trainingDf())
+      db_insert_into(con = dbConOut$con, table = input$dbOutTable, values = trainingDf())
     }
   })
   
