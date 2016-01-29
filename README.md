@@ -1,6 +1,5 @@
 ## segmentInterpreter
 
------
 
 A shiny utility to interpret segments of a partitioned time-series. The partitioning is done using the `breakpoints` function/algorithm from the [strucchange](https://cran.r-project.org/package=strucchange) R package. The aim of visually interpretting a set of time-series segments is to create a training dataset for automatic classification of the segments into their land dynamics afterwards (using random forest or other classifiers). 
 
