@@ -37,6 +37,7 @@ shinyUI(fluidPage(
     
     column(width = 3,
            h3("Databases connections"),
+           tags$i("Don't forget to connect to the output database by clicking on the button"),
            textInput('dbPath', 'Path to input database',
                      value = '/home/dutri001/git/resilience/data/SR_ee_samples_amazon.sqlite'),
            uiOutput("dbTableSelect"),
@@ -44,11 +45,11 @@ shinyUI(fluidPage(
                      value = '/home/dutri001/git/resilience/data/trainingSamples.sqlite'),
            textInput('dbOutTable', "Output database table name",
                      'training'),
-           actionButton("dbConnect", "Connect to (or create) output database"))
+           actionButton("dbConnect", "Connect to (or create) output database")),
     
-    # column(width = 4
-    #        
+    column(width = 3,
+          leafletOutput("plotLocation")     
     #        # htmlOutput("dbStatus")
-    #        )
+          )
   )
 ))

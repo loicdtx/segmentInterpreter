@@ -170,6 +170,21 @@ shinyServer(function(input, output) {
       counter$i <- isolate(counter$i) + 1
     }
   })
+  
+  # reactive that gets pixel location
+  point <- reactive({
+    vec <- cbind(breakpts()@df$long[1], breakpts()@df$lat[1])
+    return(vec)
+  })
+  
+  # Add leaflet map
+  output$plotLocation <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles("Esri.WorldImagery",
+                       options = providerTileOptions(noWrap = TRUE)
+      ) %>%
+      addMarkers(data = point())
+  })
 
 })
 
