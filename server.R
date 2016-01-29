@@ -4,6 +4,7 @@ library(RSQLite)
 library(spectralResilience)
 library(magrittr)
 library(stringr)
+library(leaflet)
 
 source('R/utils.R') # cloudShadow(), getLandsatDate()
 
