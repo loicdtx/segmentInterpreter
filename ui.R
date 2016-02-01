@@ -1,5 +1,5 @@
 library(shiny)
-
+library(leaflet)
 
 shinyUI(fluidPage(
   # Custom css for status dots
