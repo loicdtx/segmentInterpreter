@@ -8,8 +8,6 @@ library(leaflet)
 
 source('R/utils.R') # cloudShadow(), getLandsatDate()
 
-dbConOut <- NULL
-
 shinyServer(function(input, output) {
   
   # FOr time-series number
@@ -41,12 +39,6 @@ shinyServer(function(input, output) {
     return(tbl(dbCon(), dbTables()))
   })
   
-  # Create/connect to output db when button is pressed
-  observe({
-    if(input$dbConnect > 0) {
-      dbConOut <<- src_sqlite(input$dbOutPath, create = TRUE)
-    }
-  })
   
   # Get status of output db connection
   # dbConOut_status <- reactive({
@@ -161,7 +153,12 @@ shinyServer(function(input, output) {
   observe({
     if(input$writeToDb > 0) { # When button is pressed in UI
       # Update database
-      db_insert_into(con = dbConOut$con, table = input$dbOutTable, values = trainingDf())
+      # Open connection
+      dbConOut <- src_sqlite(input$dbOutPath, create = TRUE)
+      # Append dataframe to db
+      db_insert_into(con = dbConOut$con, table = input$dbOutTable, values = isolate(trainingDf()))
+      # close connection
+      dbDisconnect(dbConOut$con)
     }
   })
   
